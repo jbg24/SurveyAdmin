@@ -6,7 +6,7 @@
 import sys
 import pandas as pd
 import numpy as np
-import getopt
+#import getopt
 import random
 import datetime
 import re
@@ -14,9 +14,10 @@ import subprocess
 import string
 import ast
 import os
-import xlwt
-from xlrd import open_workbook
-from xlutils.copy import copy
+#import xlwt
+import xlrd
+from xlutils.filter import process,XLRDReader,XLWTWriter
+#from xlutils.copy import copy
 from sample import sample
 from upload_panel import upload_panel, upload_survey
 from custom_format import custom_format_hth
@@ -442,6 +443,19 @@ def update_response_rates(profiled_info,panel_id,survey_id,level):
     current_response_list = current_response_list.append(new_info,ignore_index=True)
     current_response_list.to_csv(response_rates_file,index=False)
 
+def copy2(wb):
+    '''
+    Patch: add this function to the end of xlutils/copy.py
+    :param wb: excel workbook using xlrd
+    :return: workbook with format preserved
+    '''
+    w = XLWTWriter()
+    process(
+        XLRDReader(wb,'unknown.xls'),
+        w
+        )
+    return w.output[0][1], w.style_list
+
 def print_login_codes(school_name, data_points,codes_path):
     '''
     Using login codes template, print login codes
@@ -450,18 +464,23 @@ def print_login_codes(school_name, data_points,codes_path):
     :return:
     '''
 
-    wbk = open_workbook("LoginCodeTemplate.xls", formatting_info=True)
-    wbk_copy = copy(wbk)
+    wbk = xlrd.open_workbook("LoginCodeTemplate.xls", formatting_info=True)
+    rdsheet = wbk.sheet_by_index(0)
+    wbk_copy,style_list = copy2(wbk)
 
     sheet_cover = wbk_copy.get_sheet(0)
-    sheet_cover.write(0,3,school_name + " Login Codes")
+    xf_index = rdsheet.cell_xf_index(3, 3)
+    sheet_cover.write(9,0,school_name + " - Login Codes",style_list[xf_index])
 
-    row_num = 2
+    row_num = 11
     for index, row in data_points.iterrows():
-        sheet_cover.write(row_num,2,row['StudentID'])
-        sheet_cover.write(row_num,4,row['ExternalDataReference'])
+        xf_index = rdsheet.cell_xf_index(2, 2)
+        sheet_cover.write(row_num,2,row['StudentID'],style_list[xf_index])
+        sheet_cover.write(row_num,4,row['ExternalDataReference'],style_list[xf_index])
         row_num += 1
 
+
+    sheet_cover.insert_bitmap('YTimage.bmp',0,2)
     wbk_copy.save(codes_path)
 
 def create_panel_from(profile_info, del_less_five = False, upload_p = False, upload_s = False, custom = False, sampling = False,upload=False):
@@ -616,7 +635,7 @@ def admin_survey(profiled_df,direct_upload):
             create_panel_from(profiled_df, remove, upload_p, upload_s, custom, sampling,direct_upload)
         else:
             usage()
-            admin_survey(profiled_df,upload)
+            admin_survey(profiled_df,direct_upload)
     else:
         create_panel_from(profiled_df,remove,upload_p,upload_s,custom,sampling,direct_upload)
 
