@@ -5,6 +5,7 @@ import pandas as pd
 import datetime
 import sys
 import requests
+import os
 requests.packages.urllib3.disable_warnings()
 
 def remove_nonascii(text):
@@ -155,19 +156,22 @@ def get_report():
     thirty_days = datetime.date.today() + datetime.timedelta(45)
 
     # Either append to existing Profiled School file or create new one
-    try:
-        current_profiled = pd.read_csv("Profiles/ProfiledSchools.csv")
-        current_profiled = current_profiled[cols]
-        profiled_schools = profiled_schools[profiled_schools['Survey Start Date']<thirty_days].append(current_profiled,ignore_index=True)
+    if os.path.exists('Profiles'):
+        try:
+            current_profiled = pd.read_csv("Profiles/ProfiledSchools.csv")
+            current_profiled = current_profiled[cols]
+            profiled_schools = profiled_schools[profiled_schools['Survey Start Date']<thirty_days].append(current_profiled,ignore_index=True)
+        except:
+            print "\nProfiles/ProfiledSchools.csv Doesn't Exist -- creating new copy"
         try:
             profiled_schools.to_csv("Profiles/ProfiledSchools.csv",cols=cols)
-            print "\n Updated! Profiles/ProfiledSchools.csv\n"
+            print "\nUpdated! Profiles/ProfiledSchools.csv\n"
         except IOError:
             print "\n **** Trouble writing to file Profiles/ProfiledSchools.csv ****"
-    except:
+    else:
+        os.makedirs('Profiles')
         profiled_schools[profiled_schools['Survey Start Date']<thirty_days].to_csv("Profiles/ProfiledSchools.csv",header=True,cols=cols)
-        print "\n Saved! Profiles/ProfiledSchools.csv\n"
-
+        print "\n Created Profiles Directory and save new copy of ProfiledSchools.csv\n"
 
 def choose_schools():
     try:
