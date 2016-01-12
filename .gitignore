@@ -1,4 +1,4 @@
 *.pyc
 *.log
 .idea/*
-Profiles/*.csv
+Profiles/ProfiledSchools.csv
