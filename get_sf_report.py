@@ -159,11 +159,15 @@ def get_report():
         current_profiled = pd.read_csv("Profiles/ProfiledSchools.csv")
         current_profiled = current_profiled[cols]
         profiled_schools = profiled_schools[profiled_schools['Survey Start Date']<thirty_days].append(current_profiled,ignore_index=True)
-        profiled_schools.to_csv("Profiles/ProfiledSchools.csv",cols=cols)
-        print "\n Updated! Profiles/ProfiledSchools.csv\n"
+        try:
+            profiled_schools.to_csv("Profiles/ProfiledSchools.csv",cols=cols)
+            print "\n Updated! Profiles/ProfiledSchools.csv\n"
+        except IOError:
+            print "\n **** Trouble writing to file Profiles/ProfiledSchools.csv ****"
     except:
         profiled_schools[profiled_schools['Survey Start Date']<thirty_days].to_csv("Profiles/ProfiledSchools.csv",header=True,cols=cols)
         print "\n Saved! Profiles/ProfiledSchools.csv\n"
+
 
 def choose_schools():
     try:

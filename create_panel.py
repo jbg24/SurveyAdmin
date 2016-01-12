@@ -505,7 +505,8 @@ def create_panel_from(profile_info, del_less_five = False, upload_p = False, upl
     #loop through each profiled school
     for index, row in profile_info.iterrows():
 
-        if row[pd.isnull(row)]:
+        hasNulls = pd.isnull(row).tolist()
+        if True in hasNulls:
             print "\n--Missing Profile Info: Skipping row %i in profiled schools file\n" %(index)
             continue
 
@@ -548,24 +549,23 @@ def create_panel_from(profile_info, del_less_five = False, upload_p = False, upl
                 OSE_info['ExternalDataReference'] = code
                 output_panel = output_panel.append(OSE_info, True)
 
+            # Login code path
+            login_codes_path = output_login_path + "\\" + school_short + "_logincodes"
+
             # Concatenate roster info with OSE info if FFT
             if is_FFT:
                 final_output = pd.concat([output_panel,roster_part], axis=1)
                 login_codes = final_output[['ExternalDataReference','StudentID']]
+                print_login_codes(row['School_Name'],login_codes,login_codes_path +".xls")
                 print "Number of students for " + school_short + ": " + str(len(roster_part))
             else:
                 final_output = output_panel
                 login_codes = final_output['ExternalDataReference']
-                print "Number of IDs for " + school_short + ": " + str(len(final_output)) + "\n\n"
+                login_codes.to_csv(login_codes_path +".csv", index=False,header=True)
+                print "Number of IDs for " + school_short + ": " + str(len(final_output)) + "\n"
 
             final_output=final_output.dropna(axis=1,how='all')
             final_output.to_csv(output_panel_path + "\\" + output_name, index=False)
-
-            login_codes_path = output_login_path + "\\" + school_short + "_logincodes"
-            if is_FFT == False:
-                login_codes.to_csv(login_codes_path +".csv",index=False)
-            else:
-                print_login_codes(row['School_Name'],login_codes,login_codes_path +".xls")
 
         panel_id = ""
         survey_id = ""
