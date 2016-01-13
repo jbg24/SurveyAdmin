@@ -293,7 +293,7 @@ def make_school_short(short_name,start_date,surv_window):
     :param short_name: (string) school short name without the round
     :return:
     '''
-    year_survey = str(start_date).strip()[-2:]
+    year_survey = try_parsing_date(start_date)
     month_survey = str(surv_window).strip()[0]
     if month_survey == 'J' and str(surv_window).strip()[1] == 'a':
         month_survey = 'Ja'
@@ -301,6 +301,16 @@ def make_school_short(short_name,start_date,surv_window):
         month_survey = 'Jn'
     school_short = str(short_name).strip() + year_survey + month_survey
     return school_short
+
+# Parse date to account for different date formatting -- not clear why this happens
+def try_parsing_date(text):
+    for fmt in ('%Y-%m-%d', '%d.%m.%Y', '%m/%d/%Y'):
+        try:
+            dt = datetime.datetime.strptime(text, fmt)
+            return dt.strftime('%Y').strip()[-2:]
+        except ValueError:
+            pass
+    raise ValueError('no valid date format found')
 
 def get_ose_info(profiled_info):
     '''

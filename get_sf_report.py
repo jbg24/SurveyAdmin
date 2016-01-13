@@ -71,10 +71,8 @@ def get_profiled_schools():
         school_list.append(remove_nonascii(record['Organization_School__r']['Name']))
         survey_windows.append(remove_nonascii(record['Opportunity__r']['Survey_Window__c']))
 
-        datest = record['School_Survey_Start_Date__c']
-        datearr = datest.split("-")
-        datedt = datetime.date(int(datearr[0]),int(datearr[1]),int(datearr[2]))
-        start_dates.append(datedt)
+        strtdate = str(record['School_Survey_Start_Date__c'])
+        start_dates.append(strtdate)
 
         school_level.append(remove_nonascii(record['Organization_School__r']['High_Middle_Elementary__c']))
         school_shorts.append(remove_nonascii(record['Short__c']))
