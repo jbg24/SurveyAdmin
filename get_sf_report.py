@@ -72,7 +72,8 @@ def get_profiled_schools():
         survey_windows.append(remove_nonascii(record['Opportunity__r']['Survey_Window__c']))
 
         strtdate = str(record['School_Survey_Start_Date__c'])
-        start_dates.append(strtdate)
+        strtdate = datetime.datetime.strptime(strtdate,'%Y-%m-%d')
+        start_dates.append(strtdate.date())
 
         school_level.append(remove_nonascii(record['Organization_School__r']['High_Middle_Elementary__c']))
         school_shorts.append(remove_nonascii(record['Short__c']))
@@ -153,23 +154,17 @@ def get_report():
     # Thirty days from now to limit results
     thirty_days = datetime.date.today() + datetime.timedelta(45)
 
-    # Either append to existing Profiled School file or create new one
-    if os.path.exists('Profiles'):
-        try:
-            current_profiled = pd.read_csv("Profiles/ProfiledSchools.csv")
-            current_profiled = current_profiled[cols]
-            profiled_schools = profiled_schools[profiled_schools['Survey Start Date']<thirty_days].append(current_profiled,ignore_index=True)
-        except:
-            print "\nProfiles/ProfiledSchools.csv Doesn't Exist -- creating new copy"
-        try:
-            profiled_schools.to_csv("Profiles/ProfiledSchools.csv",cols=cols)
-            print "\nUpdated! Profiles/ProfiledSchools.csv\n"
-        except IOError:
-            print "\n **** Trouble writing to file Profiles/ProfiledSchools.csv ****"
-    else:
+    # Check if Profiles directory exists and make if not
+    if not os.path.exists('Profiles'):
         os.makedirs('Profiles')
+
+    # Create new or replace ProfiledSchools.csv file
+    try:
         profiled_schools[profiled_schools['Survey Start Date']<thirty_days].to_csv("Profiles/ProfiledSchools.csv",header=True,cols=cols)
-        print "\n Created Profiles Directory and save new copy of ProfiledSchools.csv\n"
+        print "\nUpdated! Profiles/ProfiledSchools.csv\n"
+    except IOError:
+        print "\n **** Trouble writing to file Profiles/ProfiledSchools.csv ****"
+
 
 def choose_schools():
     try:
