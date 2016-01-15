@@ -434,8 +434,7 @@ def update_response_rates(profiled_info,panel_id,survey_id,level):
 
     level_dict = {'HS':'year','MS':'m_grade','ES':'e_grade'}
     # Create path for output
-    response_rates_file = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..\\..\\ResponseRates\\activesurveylist.csv'))
-    current_response_list = pd.DataFrame.from_csv(response_rates_file,index_col=None)
+    response_rates_file = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..\\..\\ResponseRates\\mainsurveylist.csv'))
     new_info = {}
     new_info['SurveyName'] = profiled_info['School_Name']
     if profiled_info['OE'] == True:
@@ -450,8 +449,13 @@ def update_response_rates(profiled_info,panel_id,survey_id,level):
     new_info['PanelID'] = panel_id
     new_info['Enrollment'] = profiled_info['Enrolled']
     new_info['Subgroup'] = level_dict[level]
-    current_response_list = current_response_list.append(new_info,ignore_index=True)
-    current_response_list.to_csv(response_rates_file,index=False)
+    if os.path.exists(response_rates_file):
+        current_response_list = pd.DataFrame.from_csv(response_rates_file,index_col=None)
+        current_response_list = current_response_list.append(new_info,ignore_index=True)
+        current_response_list.to_csv(response_rates_file,index=False)
+    else:
+        output_response = pd.DataFrame(new_info,index=[0])
+        output_response.to_csv(response_rates_file,index=False)
 
 def copy2(wb):
     '''
