@@ -4,4 +4,4 @@ SchoolProfiles/*
 Panels/*
 RosterFiles/*
 ClientFolders/*
-*.csv
+./*.csv

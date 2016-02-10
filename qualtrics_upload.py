@@ -51,8 +51,8 @@ def upload_panel(panel):
     alled = 1
 
     # Parameters
-    params = {'Name': panel_name, 'Format': format, 'ExternalRef': exref,'Request': request, \
-              'Email': email, 'Token': token, 'Version': version, 'User': user, \
+    params = {'Name': panel_name, 'Format': format, 'ExternalRef': exref,'Request': request,
+              'Email': email, 'Token': token, 'Version': version, 'User': user,
               'LibraryID': libid, 'ColumnHeaders': headers, 'AllED': alled}
 
     # Post request to Qualtrics
@@ -63,6 +63,23 @@ def upload_panel(panel):
             print "\nSuccessfullly uploaded " + panel + " with panel ID:\n" + str(panel_id)
 
     return panel_id
+
+def activate_survey(survey_id):
+    '''
+    Activate survey with survey_id
+    :param survey_id:
+    :return:
+    '''
+    request = "activateSurvey"
+
+    #Parameters
+    params = {'Format': format,'Request': request,
+                'Token': token, 'Version': version, 'User': user, 'SurveyID':survey_id
+              }
+
+    r = requests.post(root_url, params=params)
+    if not r.raise_for_status():
+        print "\nSuccessfullly activated survey id " + survey_id
 
 def upload_survey(survey_template, survey_name):
     '''
@@ -76,8 +93,8 @@ def upload_survey(survey_template, survey_name):
     import_type = "QSF"
 
     #Parameters
-    params = {'Name': survey_name, 'Format': format,'Request': request, \
-                'Token': token, 'ImportFormat': import_type, 'Version': version, 'User': user, \
+    params = {'Name': survey_name, 'Format': format,'Request': request,
+                'Token': token, 'ImportFormat': import_type, 'Version': version, 'User': user,
               }
 
     # Post request to Qualtrics

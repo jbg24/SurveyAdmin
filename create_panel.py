@@ -15,7 +15,7 @@ from xlutils.filter import process,XLRDReader,XLWTWriter
 
 from argparse import ArgumentParser, ArgumentTypeError
 
-from qualtrics_upload import upload_panel,upload_survey
+from qualtrics_upload import upload_panel,upload_survey,activate_survey
 from create_survey import customize_survey
 
 '''
@@ -461,12 +461,16 @@ def create_panel(profile_info,out,upload):
         panel_path = output_files(panel_out,output_name,row['School_Name'],out_path,row['FFT'])
 
         if upload:
-            panel_id = upload_panel(panel_path)
-            survey_path = create_surveys(row,panel_path,panel_id)
-            survey_name = os.path.split(survey_path)[1].split('.json')[0]
-            survey_id = upload_survey(survey_path,survey_name)
-            update_response_rates(row,panel_id,survey_id,row['School Level'],upload)
-
+            try:
+                panel_id = upload_panel(panel_path)
+                survey_path = create_surveys(row,panel_path,panel_id)
+                survey_name = os.path.split(survey_path)[1].split('.json')[0]
+                survey_id = upload_survey(survey_path,survey_name)
+                activate_survey(survey_id)
+                update_response_rates(row,panel_id,survey_id,row['School Level'],upload)
+                out_names.append(survey_name + ',' + 'http://cep.co1.qualtrics.com/SE/?SID='+survey_id)
+            except Exception as e:
+                print >> sys.stderr, e
 
     return out_names
 
@@ -493,4 +497,7 @@ if __name__ == "__main__":
     if not args.outDir:
         args.outDir = os.getcwd()
 
-    create_panel(profiled,args.outDir,args.upload)
+    survey_urls = create_panel(profiled,args.outDir,args.upload)
+    if survey_urls:
+        for url in survey_urls:
+            print >> sys.stdout, url
