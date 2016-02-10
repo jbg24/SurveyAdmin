@@ -1,4 +1,7 @@
 *.pyc
 *.log
-.idea/*
-Profiles/ProfiledSchools.csv
+SchoolProfiles/*
+Panels/*
+RosterFiles/*
+ClientFolders/*
+*.csv

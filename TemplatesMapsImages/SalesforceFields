@@ -1,0 +1,38 @@
+Description of fields pulled from Salesforce API using simple-salesforce in salesforce_api.py file
+Conventions:
+ - Query fields using TableName.FieldName
+ - "__r" appears after a table name if it is a "parent table" - in Salesforce, this information is pulled from a parent level
+ - "__c" appear after a field name or table name that is custom made
+ - In Salesforce, a field name that has spaces is usually referenced by replacing the space with an underscore, for example
+   "Total of Student Currently Enrolled" becomes "Total_of_Students_Currently_Enrolled__c" with the '__c' appended because
+   it's a custom field
+
+These field are currently pulled from the "Profiled__c" table which contains all the schools that have been profiled with
+pertinent information for that school and survey round:
+
+Organization_School__r.Name: Name of the School, provided at the Organization level (string)
+Organization_School__r.High_Middle_Elementary__c : Level of the school, provided at Organization level (string)
+Opportunity__r.Name: Name of Opportunity, provided at Opportunity level (string)
+Opportunity__r.Survey_Window__c: Month of Survey Window provided at Opportunity level (string)
+School_Survey_Start_Date__c: Survey start date (DATE)
+Short__c,Overall_School_Experience_Report__c: Indicates participation in OSE (bool)
+Feedback_for_Teachers_Report__c: Indicates participation in FFT (bool)
+Profiled_Grade_Levels__c: Grade Levels that will be surveyd, separated by semicolon (string)
+Total_of_Students_Currently_Enrolled__c: Student enrolled for this survey round (int)
+
+The following are all additional topics that may be included in the survey and are all BOOLEAN values
+
+Early_College_High_School__c
+Project_Based_Learning_Profiled__c, STEM_Profiled__c
+General_Health_Profiled__c
+Drugs_Alcohol_Profiled__c
+Learning_Styles_Profiled__c,
+Student_Voice_Leadership_Profiled__c
+Student_Motivation_Profiled__c
+Emotional_Mental_Health_Profiled__c
+Nutrition_Exercise_Profiled__c
+School_Safety_Profiled__c
+
+For additional fields to pull, refer to Skyvia -- curently the best way to view possible fields to pull from Salesforce
+
+Jeremy Gormley, 12/1/2015

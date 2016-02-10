@@ -14,6 +14,6 @@ display " arguments are `import' and `export' "
 
 insheet using "`import'" , comma names case
 bysort StudentID: gen order = _n
-reshape wide coursename TeacherID teacherlast teacherfirst teachername subject, i(StudentID) j(order)
+reshape wide coursename TeacherID teacherlast teacherfirst teachername subject, i(StudentID linked_grade) j(order)
 outsheet using "`export'", comma replace
 clear

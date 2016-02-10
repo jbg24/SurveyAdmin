@@ -1,0 +1,14 @@
+data['SurveyElements'][1]['Payload']['Flow'][1]['Flow'][0]['EmbeddedData'] = embedded_list
+testdict = {u'Field': u'TESTINGVAR2', u'VariableType': u'Nominal', u'Type':u'Recipient', u'Description':'TESTINGVAR2'}
+
+>>> jsoFIle = open("C:\Users\jeremyg\Documents\SurveyAdmin\QualtricsSurveyTempla
+tes\ESMastersurvey.json","r")
+data = json.load(jsoFIle)
+jsoFile.close()
+
+Make edits
+
+>>> jsonFile = open("C:\\Users\\jeremyg\\Documents\\SurveyAdmin\\QualtricsSurvey
+Templates\\testingCustomSurvey.json","w+")
+jsonFile.write(json.dumps(data))
+jsonFile.close()

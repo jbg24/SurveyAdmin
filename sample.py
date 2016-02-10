@@ -1,167 +1,213 @@
-__author__ = 'jeremyg'
+'''
+Input file with roster data in long format, sample according to max number of classes and any
+mandatory courses
+'''
 
 import pandas as pd
+import os
+import sys
 from course import Course
-from random import random
-from bisect import bisect
+import argparse
 
+parser = argparse.ArgumentParser()
+parser.add_argument('-o', '--outDir', metavar='outDir',
+                    help='Directory for new sampled restructured data file (default: ./RosterFiles)', required=False)
 
-def weighted_choice(course_list,):
+parser.add_argument('-i', '--inFile', metavar='inFile',
+                    help='Restructured roster data file to be read in', required=True)
+
+parser.add_argument('-max', '--max', metavar='max',
+                    help='Maximum count of courses for each student', required=True)
+
+parser.add_argument('-keep','--keepFile', metavar = 'keepFile',
+                    help='File with list of courses, periods, departments or teachers '
+                         'to exclude from sampling', required=False)
+
+def weighted_choice(course_list):
     '''
-    :new_student_list (dictionary) students with updated weights
-    :return:
+    Select course based on which couse from the list will have the highest student percentage after one is removed
+
+    :course_list (dictionary) list of course objects
+    :return: course object
     '''
-
-    values = course_list
-    weights = [x.weight for x in course_list]
-    total = 0
-    cum_weights = []
-    for w in weights:
-        w = w*100
-        total += w
-        cum_weights.append(total)
+    if not course_list:
+        print 'here'
+    weights = [x.get_whatif_percentage() for x in course_list]
+    index = weights.index(max(weights))
+    return course_list[index]
 
 
-    # If all below 80%, remove the one that has the highest percentage full
-    if total == 0:
-
-        for course in values:
-            if course.mandatory == False:
-                max = course
-
-        for course in values:
-            course.students_removed += 1
-            percent_full = course.get_percentage()
-            if percent_full > max.get_percentage() and course.mandatory == False:
-                max = course
-            course.students_removed -= 1
-        max.students_removed +=1
-        return max
-
-    x = random() * total
-    #returns position of value that comes to the right of x
-    i = bisect(cum_weights, x)
-
-    if values[i].mandatory:
-        values[i].weight = 0
-        return None
-
-    # See if you can remove and stay above 80%
-    values[i].students_removed += 1
-    percent_full = values[i].get_percentage()
-
-    if percent_full < 0.8:
-        values[i].students_removed -= 1
-        values[i].weight = 0
-        return None
-
-    values[i].weight = values[i].weight - 1/(float(len(values[i].student_list)))
-    return values[i]
-
-def sample(roster_data, mandatory, max_count, school_short):
+def create_courses(roster_data,keep_df=None):
     '''
-    Parses command-line arguments and creates panel from first argument
-	args: (iterable )profiled school file and, if included, argument to indicate that classes with fewer than 5 should not be removed
+    Create Course objects by doing one pass of roster file and using info from fields
+    StudentID, coursename, TeacherID. Based on the 'keeplist', determine whether a course in mandatry
+
+    Return data frame with new column that contains list of Course objects
     '''
 
-    mandatory_list = mandatory
-    max_course_count = max_count
-    roster_data_columns = roster_data.columns.tolist()
-
+    # Track courses (Course objects) that are created; will eventually be added to main roster dataframe
     course_list = []
-    student_list = {}
 
-    roster_data['tagged'] = False
+    for ix, row in roster_data.iterrows():
 
-    for id, courses in roster_data.iterrows():
-        student_list[id] =[]
-        course_info = pd.Series(courses).dropna()
+        #Info for the course
+        sid = row['StudentID']
+        course = row['coursename']
+        teachID = row['TeacherID']
+        subject = row['subject']
 
-        if len(course_info) > ((max_course_count*6) + 1):
-            roster_data.ix[id, 'tagged'] = True
+        # Does Course already exist
+        exists = False
+        for course_obj in course_list:
+            course_name = course_obj.course_name
+            teach_id = course_obj.teacher_id
 
-        courses_only = course_info.index.tolist()[5::6]
-        teachers_only = course_info.index.tolist()[2::6]
-        teachernames_only = course_info.index.tolist()[4::6]
-        subjects_only = course_info.index.tolist()[3::6]
+            if course == course_name and teachID == teach_id:
+                course_obj.add(sid)
+                course_list.append(course_obj)
+                exists = True
+                break
 
-        for teacher, course, teachername, subject in zip(teachers_only,courses_only,teachernames_only, subjects_only):
-            mandatory = False
-            if courses[subject] in mandatory_list:
-                mandatory = True
+        # Continue if course existed
+        if exists:
+            continue
+        else:
 
-            course_combo = (courses[teacher],courses[course], courses[teachername], courses[subject])
+            # Check if there is a keep list and, if so, check if this course shoudl be listed as mandatory
+            keep = False
+            if isinstance(keep_df,pd.DataFrame):
+                if course in keep_df['coursename'].tolist() or subject in keep_df['subject'].tolist():
+                    keep=True
 
-            added = False
+            # Create new course
+            new_course = Course(course,teachID,subject,keep)
+            new_course.add(sid)
 
-            for existing_course in course_list:
-                existing_combo = (existing_course.teacher_id, existing_course.course_name, existing_course.teachername, existing_course.subject)
-                if course_combo == existing_combo:
-                    existing_course.add(id)
-                    student_list[id].append(existing_course)
-                    added = True
+            course_list.append(new_course)
 
-            if added == False:
-                new_course = Course(course_combo[1],course_combo[0],course_combo[2], course_combo[3],mandatory)
-                new_course.add(id)
-                student_list[id].append(new_course)
-                course_list.append(new_course)
+    roster_data['Course'] = course_list
+    return roster_data
 
+def sample_courses(roster_data,max_count,summ_out):
+    '''
+    Go through roster data which has the course info in column Course to decided which course to remove
+    '''
 
+    courses_remove = []
 
-    flagged_students = roster_data[roster_data['tagged'] == True]
-    flagged_students.to_csv("testing_before.csv",index=True)
-    flagged_ids = flagged_students.index.tolist()
-    student_list_test = student_list
+    rost_grouped = roster_data.groupby('StudentID')['Course']
+    for sid, courses in rost_grouped:
 
-    for student in flagged_ids:
-        courses_over = len(student_list_test[student]) - max_course_count
+        # Reset
+        max = max_count
+        kept = 0
+        course_index = {}
 
-        for i in range(courses_over):
-            removed = True
-            while (removed):
-                removed_course = weighted_choice(student_list_test[student])
-                if removed_course:
-                    student_list_test[student].remove(removed_course)
-                    removed = False
+        # Course list for each students
+        for course,index in zip(courses.tolist(),courses.index.tolist()):
+            course_index[course] = index
 
+        # Remove courses that are mandatory and decrement max_count
+        for course in course_index.keys():
+            if course.mandatory or len(course.student_list)<=5:
+                del course_index[course]
+                kept += 1
+                max -= 1
 
+        if kept >= max_count:
+            print >> sys.stdout, "Too many required courses for student {} -- keeping all".format(str(sid))
+            continue
+
+        # Sample until at max_count
+        while len(course_index.keys()) > max:
+
+            remove_course = weighted_choice(course_index.keys())
+            remove_course.students_removed += 1
+
+            courses_remove.append(course_index[remove_course])
+
+            del course_index[remove_course]
+
+    print_summary(roster_data,summ_out)
+    return roster_data[-roster_data.index.isin(courses_remove)]
+
+def print_summary(roster_df,out_dir):
+    '''
+    Print summary of course information to show how many students have been removed from each course.
+
+    Roster_df: dataframe with Course column that includes Course objects
+    out_dir: where to output the summary file
+    '''
     course_names = []
-    course_teachers = []
-    course_at_full_count =[]
-    course_percentage =[]
+    teach_ids = []
+    percs = []
+    course_at_full_count = []
     course_current_count = []
 
+    # Include course info, original number of students, percentage sampled, current number of students
+    for course in set(roster_df['Course'].tolist()):
+        course_names.append(course.course_name)
+        teach_ids.append(course.teacher_id)
+        percs.append(course.get_percentage())
+        course_at_full_count.append(len(course.student_list))
+        course_current_count.append(len(course.student_list) - course.students_removed)
 
-    print "\n"
-    for each_course in course_list:
-        course_names.append(each_course.course_name)
-        course_at_full_count.append(len(each_course.student_list))
-        if each_course.get_percentage() < 0.8:
-            print "Going below 80% for: " + each_course.teachername + ", " + each_course.course_name + " (" + str(each_course.get_percentage()) + ")"
-        course_teachers.append(each_course.teachername)
-        course_percentage.append(each_course.get_percentage())
-        course_current_count.append(len(each_course.student_list) - each_course.students_removed)
-    print "\n"
-
-    summary_data = {'Course':course_names, 'Class Size': course_at_full_count, 'Percent Sampled':course_percentage, 'Sampled Size': course_current_count, 'Teacher': course_teachers}
+    summary_data = {'Course':course_names,'Teacher': teach_ids, 'Class Size': course_at_full_count, 'Percent Sampled':percs, 'Sampled Size': course_current_count}
     sampling_summary = pd.DataFrame(data=summary_data)
 
+    sampling_summary.to_csv(out_dir,index=False)
 
-    sampling_summary.to_csv("Roster/" + school_short + "sampling_summary.csv", header=True,index=False)
+def sample(roster_data, out_dir, summ_out,max_count, keep_df=None):
+    '''
+    Take in a clean roster data file and sample according to a max course count.
+    Columns: StudentID, linked_grade, teacherfirst, teacherlast, TeacherID, subject, teachername, coursename
+    '''
 
+    cols = roster_data.columns
+    roster_data = create_courses(roster_data,keep_df)
+    roster_data = sample_courses(roster_data,int(max_count),summ_out)
+    roster_data[cols].to_csv(out_dir,index=False)
 
-    line_value = []
-    finish_column = roster_data_columns[(max_course_count*6)-1]
-    final_roster = roster_data.ix[:,:finish_column]
-    for student in student_list_test.keys():
-        for each_course in student_list_test[student]:
-            line_value.extend([each_course.teachername.split(" ")[0],each_course.teachername.split(" ")[1], each_course.teacher_id, each_course.subject, each_course.teachername, each_course.course_name])
-        final_roster.ix[student] = line_value
-        line_value = []
-    final_roster['StudentID'] = final_roster.index
-    final_roster = final_roster.reset_index(drop=True)
-    return final_roster
+if __name__ == '__main__':
+
+    args = parser.parse_args()
+
+    # Try opening roster file and if exists read in as df
+    if not os.path.isfile(args.inFile):
+        raise IOError('The roster file {} does not exist.'.format(args.inFile))
+
+    try:
+        roster = pd.read_csv(args.inFile)
+    except:
+        raise IOError("The roster file {} could not be opened".format(args.inFile))
+
+    # Try opening exclusion file and read in as df
+    keep = None
+    if args.keepFile:
+        if not os.path.isfile(args.keepFile):
+            raise IOError('The keep file {} does not exist.'.format(args.inFile))
+
+        try:
+            keep = pd.read_csv(args.keepFile)
+        except:
+            raise IOError("The keep file {} could not be opened".format(args.inFile))
+
+    # Use directory RosterFiles if no output directory specified
+    if not args.outDir:
+        if not os.path.exists('./RosterFiles'):
+            os.makedirs('./RosterFiles')
+        args.outDir = './RosterFiles'
+
+    path_noext = os.path.splitext(args.inFile)[0]
+    filename = os.path.basename(path_noext)
+
+    print >> sys.stdout, "Sampling " + filename
+    sampled_name = filename + '_sampled.csv'
+    summ_name = filename + '_samplingSummary.csv'
+    sampled_out = os.path.join(args.outDir,sampled_name)
+    summ_out = os.path.join(args.outDir,summ_name)
+
+    sample(roster,sampled_out,summ_out,args.max,keep)
 
 
 
