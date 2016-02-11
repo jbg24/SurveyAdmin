@@ -105,6 +105,7 @@ def upload_survey(survey_template, survey_name):
             print "\nSuccessfullly uploaded " + survey_name + " with survey ID:\n" + str(survey_id)
 
     return survey_id
+
 #testing
 if __name__ == "__main__":
 
@@ -116,7 +117,7 @@ if __name__ == "__main__":
     if args.inPanel:
         for panel in args.inPanel:
             if not os.path.exists(panel):
-                raise IOError('The panel file {} does not exist.'.format(panel))
+                print >> sys.stderr, ('The panel file {} does not exist.'.format(panel))
             try:
                 upload_panel(panel)
             except requests.exceptions.RequestException as e:

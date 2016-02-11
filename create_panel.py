@@ -187,13 +187,20 @@ def copy2(wb):
 def print_ose_login_codes(data_points,codes_path):
     '''
     Print the login codes for OSE - right now, only the ExternalDataReference field in the panel --> need to make a PDF
+    Print two files - one with
     :param school_name:
     :param data_points:
     :param codes_path:
     :return:
     '''
+    length_df = len(data_points)
+    main_file_length = int(length_df*0.6)
+    data_points[:main_file_length].to_csv(codes_path,index=False,header=True)
 
-    data_points.to_csv(codes_path,index=False,header=True)
+    main_file_path = os.path.split(codes_path)[0]
+    backup_file_name = os.path.split(codes_path)[1].split('.csv')[0] + '_backup.csv'
+    backup_path = os.path.join(main_file_path,backup_file_name)
+    data_points[main_file_length:].to_csv(backup_path,index=False,header=True)
 
 def print_fft_login_codes(school_name, data_points,codes_path):
     '''
@@ -393,7 +400,10 @@ def update_response_rates(profiled_info,panel_id,survey_id,level,rr_path):
     if os.path.exists(rr_path):
         current_response_list = pd.DataFrame.from_csv(rr_path,index_col=None)
         current_response_list = current_response_list.append(new_info,ignore_index=True)
-        current_response_list.to_csv(rr_path,index=False)
+        try:
+            current_response_list.to_csv(rr_path,index=False)
+        except IOError:
+            print >> sys.stderr, "Trouble writing to {}".format(rr_path)
     else:
         output_response = pd.DataFrame(new_info,index=[0])
         output_response.to_csv(rr_path,index=False)
@@ -433,7 +443,8 @@ def create_panel(profile_info,out,upload):
             roster_path = row['Roster']
 
             if not os.path.exists(roster_path):
-                raise IOError('The roster file {} does not exist.'.format(roster_path))
+                print >> sys.stderr, 'The roster file {} does not exist. Skipping row {}'.format(roster_path,index)
+                continue
 
             try:
                 roster_file = pd.read_csv(roster_path,index_col=False)
@@ -462,6 +473,7 @@ def create_panel(profile_info,out,upload):
 
         if upload:
             try:
+
                 panel_id = upload_panel(panel_path)
                 survey_path = create_surveys(row,panel_path,panel_id)
                 survey_name = os.path.split(survey_path)[1].split('.json')[0]
@@ -469,8 +481,10 @@ def create_panel(profile_info,out,upload):
                 activate_survey(survey_id)
                 update_response_rates(row,panel_id,survey_id,row['School Level'],upload)
                 out_names.append(survey_name + ',' + 'http://cep.co1.qualtrics.com/SE/?SID='+survey_id)
+
             except Exception as e:
-                print >> sys.stderr, e
+                print >> sys.stderr, e.response.content
+                continue
 
     return out_names
 
